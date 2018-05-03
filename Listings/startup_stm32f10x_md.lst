@@ -478,11 +478,11 @@ ARM Macro Assembler    Page 8
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M3 --apcs=interw
 ork --depend=.\objects\startup_stm32f10x_md.d -o.\objects\startup_stm32f10x_md.
 o -I.\src\stm32f10x_startup -I.\src\stm32f10x_std -I.\src\library -I.\src\user 
--IC:\Users\WongYikBen\Desktop\3300\ov7725\camera\ustrobo17_internal\RTE -IC:\Ke
-il_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.1.0\Device\Include -IC:\Keil_v5\ARM\CMSIS\I
-nclude --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 521" --p
-redefine="STM32F10X_HD SETA 1" --list=.\listings\startup_stm32f10x_md.lst src\s
-tm32f10x_startup\startup_stm32f10x_md.s
+-IC:\Users\WongYikBen\Desktop\3300\ov7725\camera\ustrobo17_internal\HKUST_ELEC3
+300\RTE -IC:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.1.0\Device\Include -IC:\Keil
+_v5\ARM\CMSIS\Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSIO
+N SETA 521" --predefine="STM32F10X_HD SETA 1" --list=.\listings\startup_stm32f1
+0x_md.lst src\stm32f10x_startup\startup_stm32f10x_md.s
 
 
 

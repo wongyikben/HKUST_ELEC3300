@@ -27,7 +27,7 @@ int main()
 	tft_clear();
 	tft_prints(0,0,"OV7725 init fail");
 	tft_update();
-	while(!cameraInit(GreyScale));
+//	while(!cameraInit(GreyScale));
 	tft_clear();
 	tft_prints(0,0,"OV7725 init done");
 	//TestFunction();
