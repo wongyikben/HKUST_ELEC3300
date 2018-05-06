@@ -7,6 +7,7 @@
 #include "uart.h"
 #include "buzzer.h"
 #include "button.h"
+#include "sdcard.h"
 
 #include "tft.h"
 #include "gpio.h"

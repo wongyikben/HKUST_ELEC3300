@@ -51,7 +51,7 @@ OV7725REG cameraConfig[] =
 {
 	{COM2,			0x03},
 	{CLKRC,     0x00},
-	{COM7,      0x46},
+	{COM7,      0x40},
 	//default value for QVGA
 	{HSTART,    0x3f},
 	{HSIZE,     0x50},
@@ -681,6 +681,7 @@ vec3 WhiteBoardToCamera(vec3 v){
 void cameraTestTftDisplay(void)
 {
 	static uint8_t init=0;
+	sccbWriteByte(COM7, 0x46);
 	if(!init)
 	{
 		while(!cameraInit(RGBColour));
@@ -748,7 +749,6 @@ void cameraHighResolution(void)
 	//sccbWriteByte(VOutSize,  240>>1);
 	//sccbWriteByte(EXHCH, (240&0x01<<2)|(320&0x03));
 	
-	sccbWriteByte(COM7, 0x40);
 	camState = 0;
 	while(camState != 2);
 	FIFO_READY;
@@ -758,12 +758,11 @@ void cameraHighResolution(void)
 		{
 			READ_FIFO_GREYSCALE(temp);
 
-			uart_tx(UART3,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+			uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
 		}
 	//sccbWriteByte(HOutSize,  ImageWidth>>2);
 	//sccbWriteByte(VOutSize,  ImageLength>>1);
  //sccbWriteByte(EXHCH, (ImageLength&0x01<<2)|(ImageWidth&0x03));
-	sccbWriteByte(COM7, 0x46);
 	camState = 0;
 
 }
@@ -777,7 +776,6 @@ void cameraHighResolution(void)
 */
 
 void roughImage(){
-	sccbWriteByte(COM7, 0x40);
 	camState = 0;
 	while(camState != 2);
 	FIFO_READY;
@@ -793,7 +791,7 @@ void roughImage(){
 			}
 		}
 	}
-	sccbWriteByte(COM7, 0x46);
+	//sccbWriteByte(COM7, 0x46);
 	camState = 0;
 }
 
@@ -808,16 +806,20 @@ void roughImage(){
 
 // not yet tested
 void flashDetection(u8 number,u8 LED,u8 cor){
-
+	u32 time = 0;
 	send_LED(0x00);
-	while(!get_ready());
-	reset_ready();
+	time = get_ticks();
+	//tft_prints(0,6,"SEND_LED(0x00)");
+	tft_update();
+	while(get_ticks()<time+60){}
 	
 	roughImage();
 	
 	send_LED(LED);
-	while(!get_ready());
-	reset_ready();
+	//tft_prints(0,6,"SEND_LED(0x01)");
+	tft_update();
+	time = get_ticks();
+	while(get_ticks()<time+60){}
 	
 	camState = 0;
 	while(camState != 2);
@@ -825,6 +827,8 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 	u8 temp =0 ;
 	
 	if(number == 1){
+	//tft_prints(0,6,"second image");
+	tft_update();
 		for(uint16_t j=0;j<240;j++){
 			for(uint16_t i=0;i<320;i++){
 				if(i%4==0&&j%4==0){
@@ -834,8 +838,9 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 						corner[cor].n[0] = i;
 						corner[cor].n[1] = j;
 						corner[cor].n[2] = 1;
-						while(!get_ready());
-						reset_ready();
+						time = get_ticks();
+						while(get_ticks()<time+60){}
+						
 						return ;
 					}
 				}else{FAKE_READ();}
@@ -865,7 +870,7 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 					curr.n[1]=j;
 					curr.n[2]=1;
 					vec3 temp = vec_sub(point[k],curr);
-					if(vec_length2(temp)>16){ // compare the distance bewteen the existing point and current point
+					if(vec_length2(temp)>80){ // compare the distance bewteen the existing point and current point
 						point[count].n[0]=i;
 						point[count].n[1]=j;
 						point[count].n[2]=1;
@@ -875,7 +880,7 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 				
 			}
 			}else{FAKE_READ();}
-			if(count==2){
+			if(count==3){
 				
 				
 				//point 
@@ -894,8 +899,15 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 				ttemp = vec_sub(point[1],point[2]);
 				x_length = vec_length(ttemp);// scaled by 128
 				corner[2] = point[1];
-				while(!get_ready());
-				reset_ready();
+				//while(get_ticks()<time+60){}
+				tft_clear();
+				
+				tft_prints(0,0,"x: %d , y: %d",point[0].n[0],point[0].n[1]);
+				tft_prints(0,1,"x: %d , y: %d",point[1].n[0],point[1].n[1]);
+				tft_prints(0,2,"x: %d , y: %d",point[2].n[0],point[2].n[1]);
+				tft_prints(0,3,"x: %d , y: %d",x_length/128,y_length );
+				tft_update();
+				while(1);
 				return ;
 			}
 		}
@@ -923,7 +935,7 @@ void positionInit(){
 	send_next();// go to the upper right corner
 	
 	ttemp = vec_sub(corner[2],corner[3]);//
-	x_length = vec_length(ttemp)*320/x_length;
+	x_length = vec_length(ttemp)*280/x_length;
 
 	while(!get_ready());
 	reset_ready();
@@ -939,7 +951,7 @@ void positionInit(){
 	send_next(); // go back to origin
 	
 	ttemp = vec_sub(corner[0],corner[2]);
-	y_length = vec_length(ttemp)*280/y_length;
+	y_length = vec_length(ttemp)*320/y_length;
 	
 	while(!get_ready());
 	reset_ready();
@@ -978,7 +990,7 @@ void uartImage(void){
 	for(u16 j=0;j<240;j++){
 		for(u16 i=0;i<320;i++){
 			temp = readImage(i,j);
-			uart_tx(UART3,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+			uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
 			
 		}
 	}
@@ -1048,4 +1060,14 @@ void EXTI0_IRQHandler(void)
 	}
 }
   
+vec3 getCorner(u8 cor){
+	return corner[cor];
+}
 
+u16 get_x_length(void){
+	return x_length/128;
+}
+
+u16 get_y_length(void){
+	return y_length/128;
+}

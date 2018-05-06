@@ -143,7 +143,7 @@ void uart_receive(const uint8_t byte){
 			}else if(byte == UART_ERROR){ // ERROR
 				// ERROR Handler
 			}else{
-				uart_tx_byte(UART3,UART_ERROR);
+				uart_tx_byte(UART1,UART_ERROR);
 			}			
 		}
 		else{
@@ -183,35 +183,35 @@ void uart_receive(const uint8_t byte){
 }
 
 void send_position(u16 x,u16 y){
-	uart_tx_byte(UART3,0xA0);
-	uart_tx_byte(UART3,x>>7);
-	uart_tx_byte(UART3,x & 0x7F);
-	uart_tx_byte(UART3,y>>7);
-	uart_tx_byte(UART3,y & 0x7F);
-	uart_tx_byte(UART3,0xA1);
+	uart_tx_byte(UART1,0xA0);
+	uart_tx_byte(UART1,x>>7);
+	uart_tx_byte(UART1,x & 0x7F);
+	uart_tx_byte(UART1,y>>7);
+	uart_tx_byte(UART1,y & 0x7F);
+	uart_tx_byte(UART1,0xA1);
 }
 
 void send_ready(void){
 	check = 0;
-	uart_tx_byte(UART3,UART_READY);
+	uart_tx_byte(UART1,UART_READY);
 }
 
 void send_target(u8* x,u8* y,u16 size){
-	uart_tx_byte(UART3,UART_TAR_BEGIN);
+	uart_tx_byte(UART1,UART_TAR_BEGIN);
 	for(int i=0;i<size;i++){
 		// max 2^6
-		uart_tx_byte(UART3,x[i]|0x40);
-		uart_tx_byte(UART3,y[i]);
+		uart_tx_byte(UART1,x[i]|0x40);
+		uart_tx_byte(UART1,y[i]);
 	}
-	uart_tx_byte(UART3,UART_TAR_END);
+	uart_tx_byte(UART1,UART_TAR_END);
 }
 
-void send_next(void){uart_tx_byte(UART3,UART_NEXT);}
+void send_next(void){uart_tx_byte(UART1,UART_NEXT);}
 
 void send_LED(u8 LED_mode){
 	u8 temp = UART_LED;
 	temp += LED_mode;
-	uart_tx_byte(UART3,temp);
+	uart_tx_byte(UART1,temp);
  }
 
  u8 getcheck(void){return check;}

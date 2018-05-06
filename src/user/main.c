@@ -1,15 +1,18 @@
 //including header files
 #include "main.h"
 
-
+u8 SD_Tx[MULTI_BUFFER_SIZE], SD_Rx[MULTI_BUFFER_SIZE];
  
 int main()
 {
+	
 	ticks_init();
 	tft_init(0,BLACK,WHITE,GREEN);
+	//SD_init();
 	button_init();
-	uart_init(UART3,115200);
-	uart_interrupt_init(UART3,uart_receive);
+	//uart_init(UART3,115200);
+	uart_init(UART1,115200);
+	uart_interrupt_init(UART1,uart_receive);
 	u8 but = 0;
 	u8 time = 0;
 	uint32_t ticks = get_ticks();
@@ -23,15 +26,17 @@ int main()
 	}
 
 //	u8 flash_test = 0;
-	//vec3 pos;
+	vec3 pos;
 	tft_clear();
 	tft_prints(0,0,"OV7725 init fail");
 	tft_update();
-//	while(!cameraInit(GreyScale));
+	while(!cameraInit(GreyScale));
 	tft_clear();
 	tft_prints(0,0,"OV7725 init done");
 	//TestFunction();
 	tft_update();
+	u16 xx = 0 ;
+	u16 yy = 0 ;
 //	u8 x[500]={0,0,0,0,0};
 //	u8 y[500]={0,0,0,0,0};
 //	u8 array[arraySize];
@@ -51,30 +56,51 @@ int main()
 	//	if(i==arraySize-1){flash_test = 1;}
 		
 //}
+	pos.n[0] = 0;
+	pos.n[1] = 0;
 	tft_clear();
+	u16 count=0;
 	while(1)
 	{
 		
     if(get_ticks() != ticks)
 		{
       ticks = get_ticks();
-	//	if(ticks % 100 == 1){cameraTestTftDisplay();}
-			if(!read_button(BUTTON1)){
-				u8 x1[5]={1,2,3,4,5};
-				u8 y1[5]={6,7,8,9,0};
-				send_target(x1,y1,5);
+		if(ticks % 100 == 1){
+		cameraTestTftDisplay();
+		tft_update();
+		tft_clear();
+		//		count++;
+		}
+			if(read_button(BUTTON1)){
+					count ++;
+					send_LED(count);
+				//u8 x1[5]={1,2,3,4,5};
+				//u8 y1[5]={6,7,8,9,0};
+				//send_target(x1,y1,5);
 				
 				
-				//storeImage();
-				//but = 1;
-				//time = get_ticks()-ticks;
+
 			}
-			if(!read_button(BUTTON2)){
-				send_position(10000,20000);
+			if(read_button(BUTTON2)){
+				storeImage();
+			//	send_position(count ,count);
+				//count=2;
 				
 			}
-			if(!read_button(BUTTON3)){
-				send_LED(0x0F);
+			if(read_button(BUTTON3)){
+				uartImage();
+			}
+			if(read_button(BUTTON4)){
+				flashDetection(3,11,0);
+				//flashDetection(1,1,0);
+				pos = getCorner(2);
+				but = 1;
+				xx = get_x_length();
+				yy = get_y_length();
+				time = get_ticks()-ticks;
+				//count=4;
+				//send_LED(0x0F);
 			}
 		//	pos = get_position();
 			
@@ -85,18 +111,22 @@ int main()
 			//tft_prints(0,2,"LED: %d",get_LED());
 			//tft_prints(0,3,"POS: %d %d",pos.n[0],pos.n[1]);
 
-			for(int i=0;i<getSize();i++){
+		/*	for(int i=0;i<getSize();i++){
 				tft_prints(0,i,"%d %d",get_target_x()[i],get_target_y()[i]);
 			}
 			tft_prints(0,6,"%d",get_LED());
 			tft_prints(0,7,"%d",get_ready());
 			tft_prints(0,8,"%d",get_nextmove());
 			vec3 f = get_position();
-			tft_prints(0,9,"%d %d",f.n[0],f.n[1]);
+			tft_prints(0,9,"%d %d",f.n[0],f.n[1]);*/
 			//if(but){
-			//tft_prints(0,8,"Done %d",time);} 
-			tft_update();
+			
+			if(count>15){count=0;}
+			tft_prints(0,8,"Done %d",time);} 
+			tft_prints(0,7,"x:%d ,y:%d",pos.n[0],pos.n[1]);
+			tft_prints(0,6,"x:%d,y:%d",xx,yy);
+			
 		//	button_update();
-		}
+		//}
 	}
 }

@@ -41,6 +41,13 @@ vec3 WhiteBoardToCamera(vec3 v);
 
 vec3 CameraToWhiteBoard(vec3 v);
 
+void flashDetection(u8 number,u8 LED,u8 cor);
+
+vec3 getCorner(u8 cor);
+
+u16 get_x_length(void);
+
+u16 get_y_length(void);
 // -image colour, resolution setting-
 //sccbWriteByte(COM7,);
 
