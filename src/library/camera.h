@@ -16,8 +16,7 @@ uint8_t sccbWriteByte(uint16_t address,uint8_t data);
 uint8_t sccbReadByte(uint8_t* buffer, uint16_t length, uint8_t address);
 //ov7725
 uint8_t cameraInit(ImageType outputType);
-uint8_t cameraReceiveFrame(void);
-uint8_t cameraCaptureFrame(void);
+
 //flipping RGB to BGR or BGR to RGB
 uint16_t flipRB(uint16_t input);
 //changing 8bit grey scale to 16bit grey scale
@@ -33,9 +32,15 @@ void storeImage(void);
 
 void uartImage(void);
 
+void uartImage2(void);
+
+void storeImage2(void);
+
 void TestFunction(void);
 
 void PositionUpdate(void);
+
+void ComputeCoordinate(u16 x,u16 y);
 
 vec3 WhiteBoardToCamera(vec3 v);
 
@@ -48,6 +53,12 @@ vec3 getCorner(u8 cor);
 u16 get_x_length(void);
 
 u16 get_y_length(void);
+
+mat3 getUpper_M(void);
+
+u8 in_upper(u32 x,u32 y);
+
+void computeDirty(void);
 // -image colour, resolution setting-
 //sccbWriteByte(COM7,);
 

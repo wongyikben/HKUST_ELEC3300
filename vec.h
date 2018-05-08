@@ -43,10 +43,12 @@ void sca_mat_prod(s32 a,mat3* b);
 
 void sca_mat_div(s32 a,mat3* b);
 
-mat3 inverse(mat3 a);
+mat3 inverse(const mat3 a);
 
 u8 in_triangle (vec3 v1,vec3 v2 ,vec3 v0 , vec3 v);
 
 void assign_col(mat3* m, vec3 v, u8 index);
+
+u8 in_rectangle(vec3 v,vec3* x);
 
 #endif

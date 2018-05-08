@@ -1,7 +1,7 @@
 #include "vec.h"
 
 s32 det(s32 a , s32 b, s32 c,s32 d){
-	return a*b-c*d;
+	return a*d-b*c;
 }
 
 uint32_t Sqrt(int32_t v) // scaled by 128
@@ -57,11 +57,11 @@ vec3 vec_sub(vec3 a,vec3 b){
 }
 
 s32 vec_length(vec3 a){ //scaled by 128
-			return Sqrt(a.n[0]*a.n[0]+a.n[1]*a.n[1]+a.n[2]*a.n[2]);
+			return Sqrt(a.n[0]*a.n[0]+a.n[1]*a.n[1]);
 }
 
 s32 vec_length2(vec3 a){ 
-			return (a.n[0]*a.n[0]+a.n[1]*a.n[1]+a.n[2]*a.n[2]);
+			return (a.n[0]*a.n[0]+a.n[1]*a.n[1]);
 }
 
 mat3 mat_prod(mat3 a, mat3 b){
@@ -100,8 +100,8 @@ mat3 transpose(mat3 a){
 vec3 mat_vec_prod(mat3 a,vec3 b){
 	vec3 result;
 	result.n[0] = a.n[0]*b.n[0]+a.n[1]*b.n[1]+a.n[2]*b.n[2];
-	result.n[1] = a.n[3]*b.n[1]+a.n[4]*b.n[1]+a.n[5]*b.n[2];
-	result.n[2] = a.n[6]*b.n[2]+a.n[7]*b.n[1]+a.n[8]*b.n[2];
+	result.n[1] = a.n[3]*b.n[0]+a.n[4]*b.n[1]+a.n[5]*b.n[2];
+	result.n[2] = a.n[6]*b.n[0]+a.n[7]*b.n[1]+a.n[8]*b.n[2];
 	return result;
 }
 
@@ -141,8 +141,8 @@ void sca_mat_div(s32 a,mat3* b){
 	(*b).n[8]/=a;
 }
 
-mat3 inverse(mat3 a){ // multipled by 128
-	s16 detA = mat_det(a);
+mat3 inverse(const mat3 a){ // multipled by 128
+	s32 detA = mat_det(a);
 	if (detA == 0) {return a;}
 		
 		mat3 result;
@@ -156,7 +156,7 @@ mat3 inverse(mat3 a){ // multipled by 128
 		result.n[6] = det(a.n[1], a.n[2], a.n[4], a.n[5]);
 		result.n[7] =-det(a.n[0], a.n[2], a.n[3], a.n[5]);
 		result.n[8] = det(a.n[0], a.n[1], a.n[3], a.n[4]);
-		sca_mat_prod(128,&result);
+		sca_mat_prod(4096,&result);
 		sca_mat_div(detA,&result);
 		result = transpose(result);
 		return result;
@@ -178,6 +178,35 @@ u8 in_triangle (vec3 v1,vec3 v2 ,vec3 v0 , vec3 v){
 
 void assign_col(mat3* m, vec3 v, u8 index){
 	(*m).n[index+0] = v.n[0];
-	(*m).n[index+3] = v.n[2];
-	(*m).n[index+6] = v.n[1];
+	(*m).n[index+3] = v.n[1];
+	(*m).n[index+6] = v.n[2];
+}
+
+
+u8 in_rectangle(vec3 v,vec3* x){
+	vec3 first;
+	vec3 second;
+	vec3 result;
+	
+	first = vec_sub(x[2],x[0]);
+	second = vec_sub(v,x[0]);
+	result = cross_prod(first,second);
+	if(result.n[2]>=0){return 0;}
+	
+	first = vec_sub(x[0],x[1]);
+	second = vec_sub(v,x[1]);
+	result = cross_prod(first,second);
+	if(result.n[2]>=0){return 0;}
+	
+	first = vec_sub(x[3],x[2]);
+	second = vec_sub(v,x[2]);
+	result = cross_prod(first,second);
+	if(result.n[2]>=0){return 0;}
+	
+	first = vec_sub(x[1],x[3]);
+	second = vec_sub(v,x[3]);
+	result = cross_prod(first,second);
+	if(result.n[2]>=0){return 0;}
+
+	return 1;
 }

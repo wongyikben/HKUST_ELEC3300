@@ -7,6 +7,9 @@
 #define colSize 	(arraySize/320)
 
 void writeRow(u8* array, u16 y);
+void writeRow2(u8* array,u16 y);
+
 u8 readImage(u16 x,u16 y);
+u8 readImage2(u16 x, u16 y);
 
 #endif

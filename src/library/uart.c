@@ -21,6 +21,8 @@ vec3 position;
 u8 LED_state=0;
 u8 check = 0; // first bit for target mode, second bit for position mode,thrid bit for ready state,
 // fourth bit for next move,last two bit for position
+// fifth bit for init 
+// sixth bit for clean 
 u8 target_x[500];
 u8 target_y[500];
 
@@ -142,6 +144,10 @@ void uart_receive(const uint8_t byte){
 				LED_state = byte&0x0F;
 			}else if(byte == UART_ERROR){ // ERROR
 				// ERROR Handler
+			}else if(byte == UART_INIT){ // INIT
+					check = CHECK_INIT;
+			}else if(byte == UART_CLEAN){ // ERROR
+					check = CHECK_CLEAN;
 			}else{
 				uart_tx_byte(UART1,UART_ERROR);
 			}			
@@ -180,6 +186,14 @@ void uart_receive(const uint8_t byte){
 			
 			}
 		}
+}
+
+void send_init(void){
+	uart_tx_byte(UART1,UART_INIT);
+}
+
+void send_clean(void){
+	uart_tx_byte(UART1,UART_CLEAN);
 }
 
 void send_position(u16 x,u16 y){
@@ -227,5 +241,7 @@ u8	get_LED(void){return LED_state;}
 vec3 get_position(void){return position;}
 u8 get_ready(void){return check& CHECK_READY;}
 u8 get_nextmove(void){return check&CHECK_NEXT;}
+u8 get_init(void){return check&CHECK_INIT;}
+u8 get_clean(void){return check&CHECK_CLEAN;}
 // please use this function to reset all the state
 void reset_ready (void){check=0;}

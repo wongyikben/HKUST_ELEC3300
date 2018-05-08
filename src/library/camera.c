@@ -2,8 +2,8 @@
 
 
 #define TOP_LEFT 	0
-#define BOT_LEFT 	2
 #define TOP_RIGHT 1
+#define BOT_LEFT 	2
 #define BOT_RIGHT 3
 
 
@@ -19,6 +19,7 @@ uint8_t threshold = 0;
 //uint8_t image[ImageLength][ImageWidth];
 u8 Image[arraySize]; // 4 Row 
 u8 rough[ImageLength/4][ImageWidth/4];
+
 
 u16 x_limit[2];
 u16 y_limit[2];
@@ -36,6 +37,12 @@ mat3 Lower_M;
 mat3 Upper_invM;
 mat3 Lower_invM;
 
+s32 slope = 0;
+s32 offset = 0;
+
+u16 x_portion = 0;
+u16 y_portion = 0;
+
 
 //corner
 //     0      1 
@@ -51,7 +58,7 @@ OV7725REG cameraConfig[] =
 {
 	{COM2,			0x03},
 	{CLKRC,     0x00},
-	{COM7,      0x40},
+	{COM7,      0x46},
 	//default value for QVGA
 	{HSTART,    0x3f},
 	{HSIZE,     0x50},
@@ -64,7 +71,7 @@ OV7725REG cameraConfig[] =
 	{TGT_B,     0x7f},
 	{FixGain,   0x09},
 	{AWB_Ctrl0, 0xe0},
-	{DSP_Ctrl1, 0xbf},
+	{DSP_Ctrl1, 0xbd},
 	{DSP_Ctrl2, 0x0c},
 	{DSP_Ctrl3,	0x00},
 	{DSP_Ctrl4, 0x00},
@@ -259,48 +266,95 @@ void config_limit(void){
 	temp.n[1] = 0;
 	temp.n[2] = 1;
 	
-	assign_col(&V,temp,1);
-	temp.n[1] = y_length;
 	assign_col(&V,temp,0);
+	temp.n[1] = y_length;
+	assign_col(&V,temp,1);
 	temp.n[0] = x_length;
+	temp.n[1] = 0;
 	assign_col(&V,temp,2);
 	
 	mat3 inv_C;
 	mat3 inv_V;
 	
 	inv_C = inverse(C); // scaled by 128
+	
+	//for(int i=0;i<3;i++){
+	//	tft_prints(0,i,"%d %d %d",V.n[i*3+0],V.n[i*3+1],V.n[i*3+2]);
+	//}
+	//	tft_update();
+	//	while(1);
+	
 	inv_V = inverse(V); // scaled by 128
 	
 	Upper_M = mat_prod(V,inv_C);
+	Upper_M.n[8]=4096;
+	
+	
+
+	//for(int i=0;i<3;i++){
+	//	tft_prints(0,i,"%d %d %d",Upper_M.n[i*3+0]/1024,Upper_M.n[i*3+1]/1024,Upper_M.n[i*3+2]/1024);
+	//}
+	//tft_update();
+	//while(1);
+	
 	Upper_invM = mat_prod(C,inv_V);
+	Upper_invM.n[8]=4096;
 	
 	assign_col(&C,corner[BOT_RIGHT],0);
-	temp.n[1] = 0;
+	temp.n[1] = y_length;
+	//temp.n[0] = x_length;
 	assign_col(&V,temp,0);
 	
+	
+
 	inv_C = inverse(C); // scaled by 128
 	inv_V = inverse(V); // scaled by 128
 	
 	Lower_M = mat_prod(V,inv_C);
+	Lower_M.n[8]=4096;
 	Lower_invM = mat_prod(C,inv_V);
+	Lower_invM.n[8]=4096;
+	
+	//for(int i=0;i<3;i++){
+	//tft_prints(0,i,"%d %d %d",Lower_M.n[i*3+0]/4096,Lower_M.n[i*3+1]/4096,Lower_M.n[i*3+2]/4096);
+	//}
+	//	tft_update();
+	//while(1);
+	
+	slope = ((corner[2].n[1]-corner[1].n[1])*4096)/(corner[2].n[0]-corner[1].n[0]);
+	offset = corner[2].n[1]*4096 - slope*corner[2].n[0];
+	
+	x_portion = 2*x_length/320;
+	y_portion = 2*y_length/280;
+	
+	//tft_clear();
+	//tft_prints(0,8,"%d",x_portion);
+	//tft_prints(0,9,"%d",y_portion);
+	//tft_update();
+	//while(1);
+	
+	
 }
 
 void TestFunction(void){
-	corner[0].n[0]= 81;
-	corner[0].n[1]= 39;
+	corner[0].n[0]= 58;
+	corner[0].n[1]= 30;
 	corner[0].n[2]= 1;
 	
-	corner[1].n[0]= 77;
-	corner[1].n[1]= 153;
+	corner[1].n[0]= 260;
+	corner[1].n[1]= 33;
 	corner[1].n[2]= 1;
 	
-	corner[2].n[0]= 262;
-	corner[2].n[1]= 200;
+	corner[2].n[0]= 48;
+	corner[2].n[1]= 150;
 	corner[2].n[2]= 1;
 	
-	corner[3].n[0]= 299;
-	corner[3].n[1]= 80;
+	corner[3].n[0]= 283;
+	corner[3].n[1]= 152;
 	corner[3].n[2]= 1;
+	
+	x_length = 1450;
+	y_length = 870;
 
 	config_limit();
 	
@@ -541,52 +595,6 @@ uint8_t cameraInit(ImageType type)
 	return SUCCESS;
 }
 
-uint8_t cameraReceiveFrame(void)
-{
-/*	if(camState != 2) //if camState != 2, i.e. 0 or 1, it means camera is capturing image n putting it to fifo
-		return ERROR;
-	FIFO_READY;
-
-	if(imageType == GreyScale)
-		for(uint16_t j=0;j<ImageLength;j++)
-			for(uint16_t i=0;i<ImageWidth;i++)
-				READ_FIFO_GREYSCALE(image[j][i]);
-	else if(imageType == BlackNWhite)
-	{
-		uint32_t sum = 0;
-		for(uint16_t j=0;j<ImageLength;j++)
-			for(uint16_t i=0;i<ImageWidth;i++)
-			{
-				READ_FIFO_GREYSCALE(image[j][i]);
-				sum += image[j][i];
-			}
-		//greyscale to black n white
-		threshold = sum / ImageLength / ImageWidth;
-		for(uint16_t j=0;j<ImageLength;j++)
-			for(uint16_t i=0;i<ImageWidth;i++)
-			{
-				if(image[j][i] >= threshold)
-					image[j][i] = 1;
-				else
-					image[j][i] = 0;
-			}
-		//end
-	}
-	else//if(imageType == SelfDefine)
-	{
-		//your own implementation
-	}
-	return SUCCESS;//success == finished receiving*/
-	return 0;
-}
-
-uint8_t cameraCaptureFrame(void)
-{
-	if(camState != 2) //if camState != 2, i.e. 0 or 1, it means camera is capturing image n putting it to fifo
-		return ERROR;
-	camState = 0;
-		return SUCCESS; //success != finish capturing
-}
 
 u8 inside(u16 x,u16 y){
 	vec3 v;
@@ -606,17 +614,17 @@ u8 inside(u16 x,u16 y){
 //     0      1 
 //     2      3
 
-u8 in_limit(u16 x,u16 y){
+u8 in_limit(s16 x,s16 y){
 	if(x>=x_limit[0]&&x<=x_limit[1]){
 		if(y>=y_limit[0]&&y<=y_limit[1]){
-			if(x>Position.n[0]-20&&x<Position.n[0]+20){
-				if(y>Position.n[1]-20&&y<Position.n[1]+20){
+			//if(x>(Position.n[0]-20)&&x<(Position.n[0]+20)){
+				//if(y>(Position.n[1]-20)&&y<(Position.n[1]+20)){
 					return 1;
 				}
 			}
 			
-		}
-	}
+//		}
+//	}
 	return 0;	
 }
 
@@ -634,13 +642,27 @@ inline uint16_t greyScale8bitTo16bit(uint8_t input)
 
 vec3 CameraToWhiteBoard(vec3 v){
 	vec3 result;
-	if(in_triangle(corner[TOP_LEFT],corner[BOT_LEFT],corner[TOP_RIGHT],v)){ // inside the top plane 
+	if(in_upper(v.n[0],v.n[1])){ // inside the top plane 
 			result = mat_vec_prod(Upper_M,v);
+		tft_prints(0,9,"Upper");
 	}
-	else if(in_triangle(corner[BOT_RIGHT],corner[BOT_LEFT],corner[TOP_RIGHT],v)){ // inside the bottom plane
+	else { // inside the bottom plane
 			result = mat_vec_prod(Lower_M,v);
+		tft_prints(0,9,"Lower");
 	}
-	sca_vec_div(128,&result);
+	
+	//tft_clear();
+	//for(int i=0;i<3;i++){
+//		tft_prints(0,i,"%d %d %d",Upper_M.n[i*3+0]/1024,Upper_M.n[i*3+1]/1024,Upper_M.n[i*3+2]/1024);
+//	}
+	
+//	tft_prints(0,4,"%d %d %d",v.n[0],v.n[1],v.n[2]);
+//	tft_prints(0,5,"%d %d %d",result.n[0]/1024,result.n[1]/1024,result.n[2]/1024);
+//	tft_update();
+//	while(1);
+	
+	sca_vec_div(4096,&result);
+	//sca_vec_div(result.n[2],&result);
 	return result;
 }
 
@@ -692,18 +714,19 @@ void cameraTestTftDisplay(void)
 	{
 	//	uart_tx(UART3,"Load in to the Fucntion");
 		FIFO_READY;
-		tft_clear_line(9);
+	//	tft_clear_line(9);
 		
-		tft_write_command(0x2a);		// Column addr set
-		tft_write_data(0x00);
-		tft_write_data(0x01); 				// X START
-		tft_write_data(0x00);
-		tft_write_data(0x00+ImageWidth/4); 			// X END
 		tft_write_command(0x2b);		// Row addr set
 		tft_write_data(0x00);
 		tft_write_data(0x19);				// Y START
 		tft_write_data(0x00);
-		tft_write_data(0x19+ImageLength/4);			// Y END
+		tft_write_data(0x19+ImageLength/3+1);	// Y END
+		tft_write_command(0x2a);		// Column addr set
+		tft_write_data(0x00);
+		tft_write_data(0x01); 				// X START
+		tft_write_data(0x00);
+		tft_write_data(0x00+ImageWidth/3+1); 			// X END
+
 		tft_write_command(0x2c); 		// write to RAM*/
 		u16 temp = 0;
 //		char r = 0;
@@ -720,7 +743,7 @@ void cameraTestTftDisplay(void)
 				} */
 				
 			//	if(i%4==0&&j%4==0&&in_limit(i,j)){
-				if(i%4==0&&j%4==0){
+				if(i%3==0&&j%3==0){
 				//	READ_FIFO_GREYSCALE(temp);
 					READ_FIFO_COLOUR(temp);
 					tft_write_data(((temp<<3)&0xF8)|((temp>>8)&0x07));
@@ -730,7 +753,7 @@ void cameraTestTftDisplay(void)
 				else{FAKE_READ();}
 
 			}
-		tft_prints(0,9,"%dms per frame",get_ticks() - t);
+	//	tft_prints(0,9,"%dms per frame",get_ticks() - t);
 		tft_update();
 		camState = 0;
 	}
@@ -738,6 +761,7 @@ void cameraTestTftDisplay(void)
 
 void cameraHighResolution(void)
 {
+	sccbWriteByte(COM7, 0x40);
 	static uint8_t init=0;
 	if(!init)
 	{
@@ -776,6 +800,7 @@ void cameraHighResolution(void)
 */
 
 void roughImage(){
+	sccbWriteByte(COM7, 0x40);
 	camState = 0;
 	while(camState != 2);
 	FIFO_READY;
@@ -806,20 +831,21 @@ void roughImage(){
 
 // not yet tested
 void flashDetection(u8 number,u8 LED,u8 cor){
+	sccbWriteByte(COM7, 0x40);
 	u32 time = 0;
 	send_LED(0x00);
 	time = get_ticks();
 	//tft_prints(0,6,"SEND_LED(0x00)");
-	tft_update();
-	while(get_ticks()<time+60){}
+	//tft_update();
+	while(get_ticks()<time+30){}
 	
 	roughImage();
 	
 	send_LED(LED);
 	//tft_prints(0,6,"SEND_LED(0x01)");
-	tft_update();
+	//tft_update();
 	time = get_ticks();
-	while(get_ticks()<time+60){}
+	while(get_ticks()<time+30){}
 	
 	camState = 0;
 	while(camState != 2);
@@ -828,18 +854,24 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 	
 	if(number == 1){
 	//tft_prints(0,6,"second image");
-	tft_update();
+	//tft_update();
 		for(uint16_t j=0;j<240;j++){
 			for(uint16_t i=0;i<320;i++){
 				if(i%4==0&&j%4==0){
 					READ_FIFO_GREYSCALE(temp);
-					if(temp - rough[j/4][i/4]>130){
+					if(temp - rough[j/4][i/4]>140){
 						send_LED(0x00);
+						if(cor==5){
+							Position.n[0] = i;
+							Position.n[1] = j;
+							Position.n[2] = 1;
+							return ;
+						}
 						corner[cor].n[0] = i;
 						corner[cor].n[1] = j;
 						corner[cor].n[2] = 1;
 						time = get_ticks();
-						while(get_ticks()<time+60){}
+						//while(get_ticks()<time+30){}
 						
 						return ;
 					}
@@ -857,7 +889,7 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 		{
 			if(i%4==0&&j%4==0){
 			READ_FIFO_GREYSCALE(temp);
-			if(temp - rough[j/4][i/4]>130){ // compare the value between the old image and the new image
+			if(temp - rough[j/4][i/4]>140){ // compare the value between the old image and the new image
 				if(count==0){
 					point[0].n[0]=i;
 					point[0].n[1]=j;
@@ -870,11 +902,15 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 					curr.n[1]=j;
 					curr.n[2]=1;
 					vec3 temp = vec_sub(point[k],curr);
-					if(vec_length2(temp)>80){ // compare the distance bewteen the existing point and current point
+					if(vec_length2(temp)<100){ // compare the distance bewteen the existing point and current point
+						break;
+					}
+					if(k==count-1){
 						point[count].n[0]=i;
 						point[count].n[1]=j;
 						point[count].n[2]=1;
 						count++;
+						break;
 					}
 				}
 				
@@ -899,15 +935,15 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 				ttemp = vec_sub(point[1],point[2]);
 				x_length = vec_length(ttemp);// scaled by 128
 				corner[2] = point[1];
-				//while(get_ticks()<time+60){}
-				tft_clear();
+				while(get_ticks()<time+30){}
+			/*tft_clear();
 				
 				tft_prints(0,0,"x: %d , y: %d",point[0].n[0],point[0].n[1]);
 				tft_prints(0,1,"x: %d , y: %d",point[1].n[0],point[1].n[1]);
 				tft_prints(0,2,"x: %d , y: %d",point[2].n[0],point[2].n[1]);
-				tft_prints(0,3,"x: %d , y: %d",x_length/128,y_length );
+				tft_prints(0,3,"x: %d , y: %d",x_length/128,y_length/128 );
 				tft_update();
-				while(1);
+				while(1);*/
 				return ;
 			}
 		}
@@ -920,43 +956,56 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 
 void positionInit(){
 	sccbWriteByte(COM7, 0x40);
+	send_init();
 	vec3 ttemp;
 	// take a full image 
 	// detect the lower left corner and the length of the robot in camera
-	
 	flashDetection(3,0x0B,0);
+	tft_clear();
+	tft_prints(0,9,"State 1 Done");
+	tft_update();
 	
 	send_next(); // go to the lower right corner 
 	while(!get_ready());
 	reset_ready();
 	
 	flashDetection(1,0x01,3);
+	tft_clear();
+	tft_prints(0,9,"State 2 Done");
+	tft_update();
 	
 	send_next();// go to the upper right corner
 	
 	ttemp = vec_sub(corner[2],corner[3]);//
-	x_length = vec_length(ttemp)*280/x_length;
+	x_length = vec_length(ttemp)*357/x_length;
 
 	while(!get_ready());
 	reset_ready();
 	
 	flashDetection(1,0x04,1);
+	tft_clear();
+	tft_prints(0,9,"State 3 Done");
+	tft_update();
 	
 	send_next(); // go to the upper left corner
 	while(!get_ready());
 	reset_ready();
 
 	flashDetection(1,0x08,0);
+	tft_clear();
+	tft_prints(0,9,"State 4 Done");
+	tft_update();
 	
 	send_next(); // go back to origin
 	
 	ttemp = vec_sub(corner[0],corner[2]);
-	y_length = vec_length(ttemp)*320/y_length;
+	y_length = vec_length(ttemp)*254/y_length;
 	
 	while(!get_ready());
 	reset_ready();
 	sccbWriteByte(COM7, 0x46);
 	camState = 0;
+	config_limit();
 	
 }
 
@@ -964,6 +1013,9 @@ void positionInit(){
 void storeImage(void){
 	sccbWriteByte(COM7, 0x40);
 	camState = 0;
+	
+	for(u8 k = 0;k<3;k++){
+	
 	while(camState != 2);
 	FIFO_READY;
 	u8 temp = 0;
@@ -971,15 +1023,45 @@ void storeImage(void){
 		for(uint16_t i=0;i<320;i++)
 		{
 			READ_FIFO_GREYSCALE(temp);
-			Image[i+(j%colSize)*320] = temp;
+			if(k==0){
+			Image[i+(j%colSize)*320] = temp/3;}else{
+			Image[i+(j%colSize)*320] = temp/3 + readImage(i,j);
+			}
 
 		}
 		if(j%colSize==(colSize-1)){writeRow(Image,j-colSize+1);}
 	}
-	sccbWriteByte(COM7, 0x46);
 	camState = 0;
+	}
+	sccbWriteByte(COM7, 0x46);
 }
 
+
+void storeImage2(void){
+	sccbWriteByte(COM7, 0x40);
+	camState = 0;
+	
+	for(u8 k = 0;k<3;k++){
+	
+	while(camState != 2);
+	FIFO_READY;
+	u8 temp = 0;
+	for(uint16_t j=0;j<240;j++){
+		for(uint16_t i=0;i<320;i++)
+		{
+			READ_FIFO_GREYSCALE(temp);
+			if(k==0){
+			Image[i+(j%colSize)*320] = temp/3;}else{
+			Image[i+(j%colSize)*320] = temp/3 + readImage2(i,j);
+			}
+
+		}
+		if(j%colSize==(colSize-1)){writeRow2(Image,j-colSize+1);}
+	}
+	camState = 0;
+	}
+	sccbWriteByte(COM7, 0x46);
+}
 
 
 
@@ -994,6 +1076,17 @@ void uartImage(void){
 			
 		}
 	}
+}
+
+void uartImage2(void){
+	u8 temp = 0;
+	for(u16 j=0;j<240;j++){
+		for(u16 i=0;i<320;i++){
+			temp = readImage2(i,j);
+			uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+			
+		}
+	}
 
 }
 
@@ -1004,22 +1097,33 @@ void ComputeCoordinate(u16 x,u16 y){
 	Camera.n[1]=y;
 	Camera.n[2]=1;
 	// Compute
+	tft_clear();
 	WhiteBoard = CameraToWhiteBoard(Camera);
 
 	Position.n[0]=x;
 	Position.n[1]=y;
 	
+	WhiteBoard.n[1] = -1*WhiteBoard.n[1]+y_length;
 	send_position(WhiteBoard.n[0],WhiteBoard.n[1]);
+	
+	tft_prints(0,7,"x:%d",WhiteBoard.n[0]);
+//	tft_prints(6,7,"x:%d",Position.n[0]);
+	tft_prints(0,8,"y:%d",WhiteBoard.n[1]);
+//	tft_prints(6,8,"y:%d",Position.n[1]);
+	tft_update();
+	return ;
 }
 
 
 void PositionUpdate(void){
 	// slow Approach 
+	
+/*	send_LED(0x02);
 	while(camState != 2){}
 
 		FIFO_READY;
 		u8 temp = 0;
-		for(uint16_t j=0;j<ImageLength;j++)
+		for(uint16_t j=0;j<ImageLength;j++){
 			for(uint16_t i=0;i<ImageWidth;i++)
 			{
 				if(i%3==0&&j%3==0&&in_limit(i,j)){
@@ -1033,7 +1137,13 @@ void PositionUpdate(void){
 				else{FAKE_READ();}
 
 			}
-	}
+	}*/
+	
+	flashDetection(1,2,5);
+	ComputeCoordinate(Position.n[0],Position.n[1]);
+	
+	
+}
 
 
 
@@ -1065,9 +1175,132 @@ vec3 getCorner(u8 cor){
 }
 
 u16 get_x_length(void){
-	return x_length/128;
+	return x_length;
 }
 
 u16 get_y_length(void){
-	return y_length/128;
+	return y_length;
+}
+
+mat3 getUpper_M(void){return Upper_M;}
+
+u8 in_upper(u32 x,u32 y){
+	if(y*4096<=slope*x+offset+10000	){return 1;}
+	return 0;
+}
+
+void computeDirty(void){
+{
+	storeImage2();
+	u16 Dirty[20][25];
+	tft_clear();
+	vec3 dis = vec_sub(corner[0],corner[2]);
+	u16 y_space = vec_length(dis)/(128*y_portion);
+	//tft_prints(0,1,"%d",y_space);
+	dis = vec_sub(corner[0],corner[1]);
+	u16 x_space = vec_length(dis)/(128*x_portion);
+	//tft_prints(0,2,"%d",x_space);
+	//tft_update();
+	//while(1);
+	
+	u8 temp = 0;
+	vec3 in_vector;
+	u8 result = 0;
+	for(uint16_t j=0;j<240;j++){
+		for(uint16_t i=0;i<320;i++)
+		{
+			in_vector.n[0] = i;
+			in_vector.n[1] = j;
+			in_vector.n[2] = 1;
+			if(in_rectangle(in_vector,corner)){
+				result = readImage(i,j);
+				if(result-readImage2(i,j)<0){result=0;}
+				else{result -= readImage2(i,j);}
+				
+				
+				if(result>=5){
+						Dirty[(j-corner[0].n[1])/y_space][(i-corner[0].n[0])/x_space]++;
+				}	
+			}
+			else{
+				result = 0;
+			}
+			
+			//uart_tx(UART1,"%c%c",((result&0xF0)>>4)+64,((result&0x0F)>>0)+64);
+			
+		}
+	}
+	u16 size = 0;
+
+	u8 last = y_portion-1;
+	
+	for(u8 i=0;i<x_portion;i++){
+		u8 min = 255;
+		u8 max = 255;
+		for(u8 j=0;j<y_portion;j++){
+				if(Dirty[j][i]>15){
+					if(!(~min)){
+						min = j;
+					}else{
+						max=j;
+					}
+				}
+		}
+		if(~min){ // if there is min 
+			if(!(~max)){ // if there is no max 
+				max = min;
+			}
+				if((max+min)/2>last){
+					if(min>0){min--;}
+				   if(max<y_portion-1){max++;}
+					get_target_x()[size] = i;
+					get_target_y()[size] = min;
+					get_target_x()[size+1] = i;
+					get_target_y()[size+1] = max;
+					last = max;
+
+				}else{
+					if(min>0){min--;}
+				  if(max<y_portion-1){max++;}
+					get_target_x()[size] = i;
+					get_target_y()[size] = max;
+					get_target_x()[size+1] = i;
+					get_target_y()[size+1] = min;
+					last = min;
+				}
+			
+			size+=2;
+		}
+		
+	}
+	
+	
+	
+	
+	
+	/*
+	for(u8 j=0;j<y_portion;j++){
+		for(u8 i=0;i<x_portion;i++){
+			if(Dirty[j][i]>15  ){
+					Dirty[j][i] = 1;
+					get_target_x()[size] = i;
+					get_target_y()[size] = j;
+					size++;
+			}else{
+				Dirty[j][i]=0;
+			}
+			//tft_prints(i,j,"%d",Dirty[j][i]);
+		}
+	}
+	
+	
+	*/
+	//tft_update();
+	send_target(get_target_x(),get_target_y(),size);
+	camState = 0;
+
+}
+
+
+
 }

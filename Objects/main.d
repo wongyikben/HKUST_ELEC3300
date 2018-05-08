@@ -23,8 +23,6 @@
 .\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\main.o: .\src\library\buzzer.h
 .\objects\main.o: .\src\library\button.h
-.\objects\main.o: .\src\library\sdcard.h
-.\objects\main.o: .\src\stm32f10x_std\inc\stm32f10x_sdio.h
 .\objects\main.o: .\src\library\tft.h
 .\objects\main.o: .\src\library\tft_ascii.h
 .\objects\main.o: .\src\library\gpio.h

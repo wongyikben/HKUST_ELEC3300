@@ -22,12 +22,16 @@ typedef enum
 #define UART_LED						0xB0
 #define UART_ERROR					0xC0
 #define UART_NEXT						0xE0
+#define UART_INIT						0x90
+#define UART_CLEAN					0xD0
 
 #define CHECK_TAR						0x80
 #define CHECK_READY					0x20
 #define CHECK_RESET					0x00
 #define CHECK_POS						0x40
 #define CHECK_NEXT       		0x10
+#define CHECK_INIT					0x08
+#define CHECK_CLEAN					0x04
 
 
 typedef void on_receive_listener(const uint8_t byte);
@@ -47,6 +51,8 @@ void send_ready(void);
 void send_target(u8* x,u8* y,u16 size);
 void send_LED(u8 LED_mode);
 void send_next(void);
+void send_init(void);
+void send_clean(void);
 
 u8 getcheck(void);
 u16 getSize(void);
@@ -56,6 +62,8 @@ u8	get_LED(void);
 vec3 get_position(void);
 u8 get_ready(void);
 u8 get_nextmove(void);
+u8 get_init(void);
+u8 get_clean(void);
 void reset_ready(void);
 
 #endif
