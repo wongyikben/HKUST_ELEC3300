@@ -189,6 +189,9 @@
   ******************************************************************************  
   */ 
 #include "sdcard.h"		
+#include "tft.h"
+#include "flash.h"
+#include "uart.h"
 
 /* Private macro -------------------------------------------------------------*/
 /** 
@@ -275,6 +278,11 @@ __IO SD_Error TransferError = SD_OK;
 __IO uint32_t TransferEnd = 0;	   
 SD_CardInfo SDCardInfo;	  
 
+typedef enum {FAILED = 0, PASSED = !FAILED} TestStatus;
+//u8 Buffer_MultiBlock_Tx[MULTI_BUFFER_SIZE], Buffer_MultiBlock_Rx[MULTI_BUFFER_SIZE];
+u8 Buffer_Block_Tx[BLOCK_SIZE],Buffer_Block_Rx[BLOCK_SIZE];
+
+
 SDIO_InitTypeDef SDIO_InitStructure;
 SDIO_CmdInitTypeDef SDIO_CmdInitStructure;
 SDIO_DataInitTypeDef SDIO_DataInitStructure;   
@@ -295,6 +303,9 @@ static void GPIO_Configuration(void);
 static uint32_t SD_DMAEndOfTransferStatus(void);
 static void SD_DMA_RxConfig(uint32_t *BufferDST, uint32_t BufferSize);
 static void SD_DMA_TxConfig(uint32_t *BufferSRC, uint32_t BufferSize);
+
+
+
 
 uint8_t convert_from_bytes_to_power_of_two(uint16_t NumberOfBytes);
 
@@ -337,10 +348,14 @@ void NVIC_Configuration(void)
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
 
   NVIC_InitStructure.NVIC_IRQChannel = SDIO_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
+	NVIC_InitStructure.NVIC_IRQChannel = DMA2_Channel4_5_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+	NVIC_Init (&NVIC_InitStructure);
+
 }
 
 /**
@@ -437,9 +452,13 @@ static void GPIO_Configuration(void)
 
 SD_Error SD_Init(void)
 {
+	
+
   SD_Error errorstatus = SD_OK;
   
   GPIO_Configuration();
+	
+	NVIC_Configuration();
 
   SDIO_DeInit();  
 
@@ -489,6 +508,7 @@ SD_Error SD_Init(void)
     errorstatus = SD_EnableWideBusOperation(SDIO_BusWide_4b);
   }  
 
+	
   return(errorstatus);
 }
 
@@ -1298,6 +1318,20 @@ SD_Error SD_ReadBlock(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize)
   */
 SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
 {
+	
+
+		for(u32 i = 0;i<NumberOfBlocks;i++){
+		SD_ReadBlock(&(readbuff[i*BlockSize]),ReadAddr+i*BlockSize,BlockSize);
+		SD_WaitReadOperation();
+
+	}
+	return SD_OK;
+	
+	
+	
+	
+	
+	/*
   SD_Error errorstatus = SD_OK;
   TransferError = SD_OK;
   TransferEnd = 0;
@@ -1333,14 +1367,15 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t Block
   SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;	
   SDIO_DataConfig(&SDIO_DataInitStructure);
 
-  /*!< Send CMD18 READ_MULT_BLOCK with argument data address */
+  //!< Send CMD18 READ_MULT_BLOCK with argument data address 
   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)ReadAddr;	
   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_READ_MULT_BLOCK;
   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short; //r1
   SDIO_CmdInitStructure.SDIO_Wait = SDIO_Wait_No;
   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
   SDIO_SendCommand(&SDIO_CmdInitStructure);
-
+	tft_clear();
+	tft_update();
   errorstatus = CmdResp1Error(SD_CMD_READ_MULT_BLOCK);
 
   if (errorstatus != SD_OK)
@@ -1348,11 +1383,11 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t Block
     return(errorstatus);
   }
 
-  SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);  
+  SDIO_ITConfig(SDIO_IT_DATAEND , ENABLE);  
   SDIO_DMACmd(ENABLE);
   SD_DMA_RxConfig((uint32_t *)readbuff, (NumberOfBlocks * BlockSize));
 
-  return(errorstatus);
+  return(errorstatus);*/
 }
 
 /**
@@ -1366,9 +1401,17 @@ SD_Error SD_ReadMultiBlocks(uint8_t *readbuff, uint32_t ReadAddr, uint16_t Block
 SD_Error SD_WaitReadOperation(void)
 {
   SD_Error errorstatus = SD_OK;
-
+	tft_clear();
+	u32 count = 0;
   while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
-  {}
+  {
+		
+		count++;
+		
+		
+		if(count == 10000){break;}
+	
+	}
 
   if (TransferError != SD_OK)
   {
@@ -1528,6 +1571,15 @@ SD_Error SD_WriteBlock(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSiz
   
 SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t BlockSize, uint32_t NumberOfBlocks)
 {
+	
+	
+	for(u32 i = 0;i<NumberOfBlocks;i++){
+		SD_WriteBlock(&(writebuff[i*BlockSize]),WriteAddr+i*BlockSize,BlockSize);
+		SD_WaitWriteOperation();
+
+	}
+	return SD_OK;
+	/*
   SD_Error errorstatus = SD_OK;
   __IO uint32_t count = 0;
 
@@ -1550,15 +1602,16 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t Bl
   SDIO_CmdInitStructure.SDIO_CPSM = SDIO_CPSM_Enable;
   SDIO_SendCommand(&SDIO_CmdInitStructure);
 
+
   errorstatus = CmdResp1Error(SD_CMD_SET_BLOCKLEN);
 
   if (SD_OK != errorstatus)
   {
     return(errorstatus);
   }
- /*********************************************************************************/
+ /////////////////////////////////////////////////////////////////////////////
 
-  /*!< To improve performance  */
+ // !< To improve performance  
   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t) (RCA << 16);
   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_APP_CMD;	// cmd55
   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
@@ -1573,7 +1626,7 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t Bl
   {
     return(errorstatus);
   }
-  /*!< To improve performance *///  
+  //!< To improve performance ///  
   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)NumberOfBlocks;  
   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_SET_BLOCK_COUNT;	 //cmd23
   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
@@ -1589,7 +1642,7 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t Bl
   }
 
 
-  /*!< Send CMD25 WRITE_MULT_BLOCK with argument data address */
+  //!< Send CMD25 WRITE_MULT_BLOCK with argument data address /
   SDIO_CmdInitStructure.SDIO_Argument = (uint32_t)WriteAddr;
   SDIO_CmdInitStructure.SDIO_CmdIndex = SD_CMD_WRITE_MULT_BLOCK;
   SDIO_CmdInitStructure.SDIO_Response = SDIO_Response_Short;
@@ -1611,12 +1664,12 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t Bl
   SDIO_DataInitStructure.SDIO_TransferMode = SDIO_TransferMode_Block;
   SDIO_DataInitStructure.SDIO_DPSM = SDIO_DPSM_Enable;
   SDIO_DataConfig(&SDIO_DataInitStructure);
-
+	
   SDIO_ITConfig(SDIO_IT_DATAEND, ENABLE);
   SDIO_DMACmd(ENABLE);    
   SD_DMA_TxConfig((uint32_t *)writebuff, (NumberOfBlocks * BlockSize));
 
-  return(errorstatus);
+  return(errorstatus);*/
 }
 
 /**
@@ -1630,9 +1683,13 @@ SD_Error SD_WriteMultiBlocks(uint8_t *writebuff, uint32_t WriteAddr, uint16_t Bl
 SD_Error SD_WaitWriteOperation(void)
 {
   SD_Error errorstatus = SD_OK;
-
+	u32 count = 0;
   while ((SD_DMAEndOfTransferStatus() == RESET) && (TransferEnd == 0) && (TransferError == SD_OK))
-  {}
+  {
+		count++;
+		if(count>=7500){break;}
+	}
+
 
   if (TransferError != SD_OK)
   {
@@ -1919,21 +1976,40 @@ SD_Error SD_SendSDStatus(uint32_t *psdstatus)
 }
 
 SD_Error SD_ProcessIRQSrc(void)
-{
-  if (StopCondition == 1)  
-  {
-    SDIO->ARG = 0x0;   
-    SDIO->CMD = 0x44C;	  			
-    TransferError = CmdResp1Error(SD_CMD_STOP_TRANSMISSION);
-  }
-  else
-  {
-    TransferError = SD_OK;
-  }
-  SDIO_ClearITPendingBit(SDIO_IT_DATAEND); 
-  SDIO_ITConfig(SDIO_IT_DATAEND, DISABLE); 
-  TransferEnd = 1;
-  return(TransferError);
+	
+{ 
+	
+	//tft_clear();
+	//tft_prints(0,0,"IRQ");
+	//tft_update();
+	//while(1);
+	
+	
+	if (SDIO_GetITStatus(SDIO_IT_DATAEND) != RESET) {
+ TransferError = SD_OK;
+ SDIO_ClearITPendingBit(SDIO_IT_DATAEND);
+ TransferEnd = 1;
+ } else if (SDIO_GetITStatus(SDIO_IT_DCRCFAIL) != RESET) {
+ SDIO_ClearITPendingBit(SDIO_IT_DCRCFAIL);
+ TransferError = SD_DATA_CRC_FAIL;
+ } else if (SDIO_GetITStatus(SDIO_IT_DTIMEOUT) != RESET) {
+ SDIO_ClearITPendingBit(SDIO_IT_DTIMEOUT);
+ TransferError = SD_DATA_TIMEOUT;
+ } else if (SDIO_GetITStatus(SDIO_IT_RXOVERR) != RESET) {
+ SDIO_ClearITPendingBit(SDIO_IT_RXOVERR);
+ TransferError = SD_RX_OVERRUN;
+ } else if (SDIO_GetITStatus(SDIO_IT_TXUNDERR) != RESET) {
+ SDIO_ClearITPendingBit(SDIO_IT_TXUNDERR);
+ TransferError = SD_TX_UNDERRUN;
+ } else if (SDIO_GetITStatus(SDIO_IT_STBITERR) != RESET) {
+ SDIO_ClearITPendingBit(SDIO_IT_STBITERR);
+ TransferError = SD_START_BIT_ERR;
+ }
+
+ SDIO_ITConfig(SDIO_IT_DCRCFAIL | SDIO_IT_DTIMEOUT | SDIO_IT_DATAEND |
+ SDIO_IT_TXFIFOHE | SDIO_IT_RXFIFOHF | SDIO_IT_TXUNDERR|
+ SDIO_IT_RXOVERR | SDIO_IT_STBITERR, DISABLE);
+ return (TransferError);
 }
 
 
@@ -2517,12 +2593,63 @@ uint8_t convert_from_bytes_to_power_of_two(uint16_t NumberOfBytes)
   return(count);
 }
 
+TestStatus eBuffercmp(uint8_t* pBuffer, uint32_t BufferLength)
+{
+  while (BufferLength--)
+  {
+    // In some SD Cards the erased state is 0xFF, in others it's 0x00 
+    if ((*pBuffer != 0xFF) && (*pBuffer != 0x00))
+    {
+      return FAILED;
+    }
+
+    pBuffer++;
+  }
+
+  return PASSED;
+}
+
+void Fill_Buffer(uint8_t *pBuffer, uint32_t BufferLength, uint32_t Offset)
+{
+  uint16_t index = 0;
+
+  /* Put in global buffer same values */
+  for (index = 0; index < BufferLength; index++ )
+  {
+    pBuffer[index] = index + Offset;
+  }
+}
+
+
+
+TestStatus Buffercmp(uint8_t* pBuffer1, uint8_t* pBuffer2, uint32_t BufferLength)
+{
+	u8 temp = 0;
+  while (BufferLength--)
+  {
+		temp = *pBuffer1;
+    if (temp != *pBuffer2)
+    {
+      return FAILED;
+    }
+	tft_clear();
+		
+	tft_prints(0,3,"%c",temp);
+	tft_update();
+		
+    pBuffer1++;
+    pBuffer2++;
+  }
+
+	
+  return PASSED;
+}
 
 
 void SD_init(void){
-	NVIC_Configuration();
+	//NVIC_Configuration();
+	
 	SD_Error Status = SD_OK;
-	Status = SD_Init();
 	tft_clear();
 	if(Status == SD_OK) 
 	{    
@@ -2534,14 +2661,134 @@ void SD_init(void){
 		tft_prints(0,1,"Status : %d ",Status );
 		while(1);
 	}		
+	TestStatus TransferStatus2 = FAILED;
 	tft_prints( 0,2,"CardType is : %d ", SDCardInfo.CardType );
 	tft_prints( 0,3,"Cap:%d ", SDCardInfo.CardCapacity );
 	tft_prints( 0,4,"Block: %d ", SDCardInfo.CardBlockSize );
 	tft_prints( 0,5,"RCA is : %d ", SDCardInfo.RCA);
 	tft_prints( 0,6,"ID is : %d", SDCardInfo.SD_cid.ManufacturerID );	
-	SD_Erase(0x00, (BLOCK_SIZE * NUMBER_OF_BLOCKS));
+	Status = SD_Erase(0x00, (BLOCK_SIZE * NUMBER_OF_BLOCKS));
 	tft_update();
-	while(1);
+	{  
+  /* Fill the buffer to send */
+  Fill_Buffer(Buffer_Block_Tx, BLOCK_SIZE, 0x01);
+	volatile TestStatus TransferStatus1 = FAILED;
+  if (Status == SD_OK)
+  {
+    /* Write block of 512 bytes on address 0 */
+    Status = SD_WriteBlock(Buffer_Block_Tx, 512, BLOCK_SIZE);
+		
+    /* Check if the Transfer is finished */
+    Status = SD_WaitWriteOperation();	
+		Status = SD_WriteBlock(Buffer_Block_Tx, 0, BLOCK_SIZE);		
+		Status = SD_WaitWriteOperation();
+   // while(SD_GetStatus() != SD_TRANSFER_OK); 
+  }
+
+  if (Status == SD_OK)
+  {
+    /* Read block of 512 bytes from address 0 */
+    Status = SD_ReadBlock(Buffer_Block_Rx, 512, BLOCK_SIZE);
+    /* Check if the Transfer is finished */
+    Status = SD_WaitReadOperation();
+    //while(SD_GetStatus() != SD_TRANSFER_OK);
+  }
+	tft_clear();
+  /* Check the correctness of written data */
+  if (Status == SD_OK)
+  {
+    TransferStatus1 = Buffercmp(Buffer_Block_Tx, Buffer_Block_Rx, BLOCK_SIZE);	
+  }
+	
+	
+	u8 temp = 0;
+	for(u16 i=0;i<512;i++){
+		temp = Buffer_Block_Rx[i];
+		uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+	}
+  
+  if(TransferStatus1 == PASSED)
+    tft_prints(0,0,"\r\n One Block Passed" );
+ 
+  else  
+    tft_prints(0,0,"\r\n One Block F" );
+}
+	
+	tft_update();
+
 }
 		   
+
+void SDIO_IRQHandler(void){
+	//tft_clear();
+	//tft_prints(0,0,"IRQ");
+	//tft_update();
+	//while(1);
+	SD_ProcessIRQSrc();
+
+}
+
+void DMA2_Channel4_5_IRQHandler(void){
+	
+	SD_ProcessDMAIRQ();
+
+
+}
+
+ void SD_ProcessDMAIRQ(void)
+ {
+ if ( DMA2_FLAG_TC4) {
+ TransferEnd = 0x01;
+	DMA_ClearFlag(DMA2_FLAG_TC4 | DMA2_FLAG_TE4 | DMA2_FLAG_HT4 | DMA2_FLAG_GL4);
+	}
+ 
+ }
+
+void SD_save(u32 addr){
+	u8 temp = 0;
+	SD_Error Status = SD_OK;
+	for(u32 i=0;i<320*240;i++){
+		Buffer_Block_Tx[i%512] = readImage2(i%320,i/320);
+		//temp = Buffer_Block_Tx[i%512];
+		//uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+		if((i+1)%512==0){
+				SD_WriteBlock(Buffer_Block_Tx,addr+(i-511),512);
+				SD_WaitWriteOperation();
+				//SD_ReadBlock(Buffer_Block_Rx,addr+(i-511),512);
+				//SD_WaitReadOperation();
+				//for(u16 j=0;j<512;j++){
+			//		temp = Buffer_Block_Rx[j];
+			//		uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+			//	}
+		}
+	}
+}
+ 
+void SD_uart(u32 addr){
+	u8 temp = 0;
+	SD_Error Status = SD_OK;
+	for(u32 i=0;i<320*240;i++){
+		//Buffer_Block_Tx[i%512] = readImage(i%320,i/320);
+		//temp = Buffer_Block_Tx[i%512];
+		//uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+		if((i+1)%512==0){
+				//SD_WriteBlock(Buffer_Block_Tx,addr+(i-511),512);
+				//SD_WaitWriteOperation();
+				SD_ReadBlock(Buffer_Block_Rx,addr+(i-511),512);
+				SD_WaitReadOperation();
+				for(u16 j=0;j<512;j++){
+					temp = Buffer_Block_Rx[j];
+					uart_tx(UART1,"%c%c",((temp&0xF0)>>4)+64,((temp&0x0F)>>0)+64);
+				}
+		}
+	}
+	
+}
+ 
+
+ 
+ 
+ 
+
+
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/

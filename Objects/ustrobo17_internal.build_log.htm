@@ -5,10 +5,10 @@
 <h2>Tool Versions:</h2>
 IDE-Version: µVision V5.21.1.0
 Copyright (C) 2016 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: ben wong, dfgj, LIC=----
+License Information: ben wong, dfgj, LIC=32BZ9-498NQ-DX2U3-AEGDE-TV5YD-IT1KM
  
 Tool Versions:
-Toolchain:       MDK-Lite  Version: 5.21a
+Toolchain:       MDK-ARM Plus  Version: 5.21a
 Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
 C Compiler:      Armcc.exe V5.06 update 3 (build 300)
 Assembler:       Armasm.exe V5.06 update 3 (build 300)
@@ -22,19 +22,47 @@ Dialog DLL:      TCM.DLL V1.14.14.0
  
 <h2>Project:</h2>
 C:\Users\WongYikBen\Desktop\3300\ov7725\camera\ustrobo17_internal\HKUST_ELEC3300\ustrobo17_internal.uvprojx
-Project File Date:  05/04/2018
+Project File Date:  05/08/2018
 
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 3 (build 300)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'stm32f103rb_template'
-".\Objects\ustrobo17_internal.axf" - 0 Error(s), 0 Warning(s).
+compiling flash.c...
+compiling sdcard.c...
+src\library\sdcard.c(2664): warning:  #177-D: variable "TransferStatus2" was declared but never referenced
+  	TestStatus TransferStatus2 = FAILED;
+src\library\sdcard.c(2748): warning:  #177-D: variable "temp" was declared but never referenced
+  	u8 temp = 0;
+src\library\sdcard.c(2749): warning:  #177-D: variable "Status" was declared but never referenced
+  	SD_Error Status = SD_OK;
+src\library\sdcard.c(2769): warning:  #177-D: variable "Status" was declared but never referenced
+  	SD_Error Status = SD_OK;
+src\library\sdcard.c(373): warning:  #177-D: function "SD_DMA_RxConfig" was declared but never referenced
+  void SD_DMA_RxConfig(uint32_t *BufferDST, uint32_t BufferSize)
+src\library\sdcard.c(400): warning:  #177-D: function "SD_DMA_TxConfig" was declared but never referenced
+   void SD_DMA_TxConfig(uint32_t *BufferSRC, uint32_t BufferSize)
+src\library\sdcard.c: 6 warnings, 0 errors
+compiling camera.c...
+src\library\camera.c(1328): warning:  #177-D: variable "temp" was declared but never referenced
+  	u8 temp = 0;
+src\library\camera.c: 1 warning, 0 errors
+compiling main.c...
+src\user\main.c(52): warning:  #177-D: variable "but" was declared but never referenced
+    u8 but = 0;
+src\user\main.c(75): warning:  #177-D: variable "count" was declared but never referenced
+  	u8 count=0;
+src\user\main.c: 2 warnings, 0 errors
+linking...
+Program Size: Code=28356 RO-data=864 RW-data=12640 ZI-data=13120  
+FromELF: creating hex file...
+".\Objects\ustrobo17_internal.axf" - 0 Error(s), 9 Warning(s).
 
 <h2>Collection of Component include folders:</h2>
   C:\Users\WongYikBen\Desktop\3300\ov7725\camera\ustrobo17_internal\HKUST_ELEC3300\RTE
   C:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.1.0\Device\Include
 
 <h2>Collection of Component Files used:</h2>
-Build Time Elapsed:  00:00:01
+Build Time Elapsed:  00:00:04
 </pre>
 </body>
 </html>

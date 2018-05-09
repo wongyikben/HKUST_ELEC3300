@@ -211,7 +211,7 @@ typedef struct
   * @brief  SDIO Data Transfer Frequency (25MHz max) 
   */
 /*!< SDIOCLK = HCLK, SDIO_CK = HCLK/(2 + SDIO_TRANSFER_CLK_DIV) */
-#define SDIO_TRANSFER_CLK_DIV            ((uint8_t)0x01) 
+#define SDIO_TRANSFER_CLK_DIV            ((uint8_t)0x04) 
 
 	  
 /** 
@@ -295,7 +295,7 @@ typedef struct
   
 /* Uncomment the following line to select the SDIO Data transfer mode */  
 #define SD_DMA_MODE                                ((uint32_t)0x00000000)
-/*#define SD_POLLING_MODE                            ((uint32_t)0x00000002)*/
+#define SD_POLLING_MODE                            ((uint32_t)0x00000001)
 
 /**
   * @brief  SD detection on its memory slot
@@ -317,6 +317,7 @@ typedef struct
 
 
 #define BLOCK_SIZE            512 /* Block Size in Bytes */
+#define SD_BLOCKSIZE   				512 
 
 #define NUMBER_OF_BLOCKS      32  /* For Multi Blocks operation (Read/Write) */
 #define MULTI_BUFFER_SIZE    (BLOCK_SIZE * NUMBER_OF_BLOCKS) 
@@ -352,7 +353,19 @@ SD_Error SD_WaitWriteOperation(void);
 
 void NVIC_Configuration(void); 
 
+void SDIO_IRQHandler(void);
+
+void DMA2_Channel4_5_IRQHandler(void);
+
+void SD_ProcessDMAIRQ(void);
+
+void SD_save(u32 addr);
+
+void SD_uart(u32 addr);
+
 void SD_init(void);
+
+
 
 
 #endif /* __SDCARD_H */

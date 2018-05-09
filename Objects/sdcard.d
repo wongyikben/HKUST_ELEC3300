@@ -21,3 +21,6 @@
 .\objects\sdcard.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\sdcard.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
 .\objects\sdcard.o: src\library\ticks.h
+.\objects\sdcard.o: src\library\flash.h
+.\objects\sdcard.o: src\library\uart.h
+.\objects\sdcard.o: src\library\../../vec.h

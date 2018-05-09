@@ -7,7 +7,9 @@
 #include "uart.h"
 #include "buzzer.h"
 #include "button.h"
-//#include "sdcard.h"
+#include "sdcard.h"
+//#include "source/ff.h"
+
 
 #include "tft.h"
 #include "gpio.h"
@@ -16,5 +18,6 @@
 #include "camera.h"
 
 int main(void);
+
 
 #endif	/* __MAIN_H */

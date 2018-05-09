@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "sdcard.h"
 
 
 #define TOP_LEFT 	0
@@ -27,6 +28,9 @@ u16 y_limit[2];
 vec3 point[3];
 vec3 corner[4];
 
+u8 user_flag = 0;
+vec3 user_point[4];
+
 s16 x_length=0;
 s16 y_length=0;
 // Position is the position of the robot in the camera , NOT THE REAL COORDINATE
@@ -39,6 +43,9 @@ mat3 Lower_invM;
 
 s32 slope = 0;
 s32 offset = 0;
+
+vec3 Position_offset;
+u8 offset_count = 0;
 
 u16 x_portion = 0;
 u16 y_portion = 0;
@@ -592,6 +599,25 @@ uint8_t cameraInit(ImageType type)
 	camState = 0;
 	//set camera image type
 	imageType = type;
+	
+	
+	user_point[0].n[0]=3;
+	user_point[0].n[1]=3;
+	user_point[0].n[2]=1;
+	
+	user_point[1].n[0]=318;
+	user_point[1].n[1]=3;
+	user_point[1].n[2]=1;
+	
+	user_point[2].n[0]=3;
+	user_point[2].n[1]=237;
+	user_point[2].n[2]=1;
+	
+	user_point[3].n[0]=318;
+	user_point[3].n[1]=237;
+	user_point[3].n[2]=1;
+	
+	
 	return SUCCESS;
 }
 
@@ -707,7 +733,6 @@ void cameraTestTftDisplay(void)
 	if(!init)
 	{
 		while(!cameraInit(RGBColour));
-		//while(!cameraInit(GreyScale));
 		init = 1;
 	}
 	if(camState == 2)
@@ -718,9 +743,9 @@ void cameraTestTftDisplay(void)
 		
 		tft_write_command(0x2b);		// Row addr set
 		tft_write_data(0x00);
-		tft_write_data(0x19);				// Y START
+		tft_write_data(0x01);				// Y START
 		tft_write_data(0x00);
-		tft_write_data(0x19+ImageLength/3+1);	// Y END
+		tft_write_data(0x01+ImageLength/3+1);	// Y END
 		tft_write_command(0x2a);		// Column addr set
 		tft_write_data(0x00);
 		tft_write_data(0x01); 				// X START
@@ -729,32 +754,28 @@ void cameraTestTftDisplay(void)
 
 		tft_write_command(0x2c); 		// write to RAM*/
 		u16 temp = 0;
-//		char r = 0;
-//		char g = 0;
-//		char b = 0;
+
 		uint32_t t=get_ticks();
 		for(uint16_t j=0;j<ImageLength;j++)
 			for(uint16_t i=0;i<ImageWidth;i++)
 			{
-		/*	if(i==160&&j==120){
-					i= 320;
-					j=240;
-					break;
-				} */
-				
-			//	if(i%4==0&&j%4==0&&in_limit(i,j)){
 				if(i%3==0&&j%3==0){
-				//	READ_FIFO_GREYSCALE(temp);
 					READ_FIFO_COLOUR(temp);
+					if(user_flag){
+						for(u8 k=0;k<4;k++){
+							if(user_point[k].n[0]==i&&user_point[k].n[1]==j){
+								temp = 0xF800;
+							}
+						}
+					}
 					tft_write_data(((temp<<3)&0xF8)|((temp>>8)&0x07));
 					tft_write_data(((temp>>11))|(temp&0xE0));	
-				
 				}	
 				else{FAKE_READ();}
 
 			}
 	//	tft_prints(0,9,"%dms per frame",get_ticks() - t);
-		tft_update();
+
 		camState = 0;
 	}
 }
@@ -929,7 +950,7 @@ void flashDetection(u8 number,u8 LED,u8 cor){
 					point[1]= point[2];
 					point[2]=ttemp;
 				}
-				Position = point[0];
+				Position = point[1];
 				ttemp = vec_sub(point[0],point[1]);
 				y_length = vec_length(ttemp);// scaled by 128
 				ttemp = vec_sub(point[1],point[2]);
@@ -960,6 +981,14 @@ void positionInit(){
 	vec3 ttemp;
 	// take a full image 
 	// detect the lower left corner and the length of the robot in camera
+	flashDetection(1,0x08,0);
+	tft_clear();
+	tft_prints(0,9,"State 4 Done");
+	tft_update();
+	send_next(); // go to the upper left corner
+	while(!get_ready());
+	reset_ready();
+	
 	flashDetection(3,0x0B,0);
 	tft_clear();
 	tft_prints(0,9,"State 1 Done");
@@ -976,8 +1005,7 @@ void positionInit(){
 	
 	send_next();// go to the upper right corner
 	
-	ttemp = vec_sub(corner[2],corner[3]);//
-	x_length = vec_length(ttemp)*357/x_length;
+
 
 	while(!get_ready());
 	reset_ready();
@@ -987,19 +1015,16 @@ void positionInit(){
 	tft_prints(0,9,"State 3 Done");
 	tft_update();
 	
-	send_next(); // go to the upper left corner
-	while(!get_ready());
-	reset_ready();
 
-	flashDetection(1,0x08,0);
-	tft_clear();
-	tft_prints(0,9,"State 4 Done");
-	tft_update();
+
 	
 	send_next(); // go back to origin
 	
 	ttemp = vec_sub(corner[0],corner[2]);
 	y_length = vec_length(ttemp)*254/y_length;
+	
+	ttemp = vec_sub(corner[2],corner[3]);//
+	x_length = vec_length(ttemp)*357/x_length;
 	
 	while(!get_ready());
 	reset_ready();
@@ -1008,6 +1033,24 @@ void positionInit(){
 	config_limit();
 	
 }
+
+
+void UserPositionInit(){
+	flashDetection(3,0x0B,0);
+	for(u8 i=0;i<4;i++){
+		corner[i]=user_point[i];
+	}
+	vec3 ttemp;
+	ttemp = vec_sub(corner[2],corner[3]);//
+	x_length = vec_length(ttemp)*357/x_length;
+	ttemp = vec_sub(corner[0],corner[2]);
+	y_length = vec_length(ttemp)*254/y_length;
+	
+	
+	config_limit();
+}
+
+
 
 
 void storeImage(void){
@@ -1104,6 +1147,19 @@ void ComputeCoordinate(u16 x,u16 y){
 	Position.n[1]=y;
 	
 	WhiteBoard.n[1] = -1*WhiteBoard.n[1]+y_length;
+	
+	if(offset_count==0){
+		Position_offset.n[0] = WhiteBoard.n[0];
+		Position_offset.n[1] = WhiteBoard.n[1];
+		offset_count++;
+	}
+	
+	WhiteBoard.n[0]-=Position_offset.n[0];
+	WhiteBoard.n[1]-=Position_offset.n[1];
+	
+	
+	if(WhiteBoard.n[0]<0){WhiteBoard.n[0]=0;}
+	if(WhiteBoard.n[1]<0){WhiteBoard.n[1]=0;}
 	send_position(WhiteBoard.n[0],WhiteBoard.n[1]);
 	
 	tft_prints(0,7,"x:%d",WhiteBoard.n[0]);
@@ -1113,6 +1169,68 @@ void ComputeCoordinate(u16 x,u16 y){
 	tft_update();
 	return ;
 }
+
+
+void quickflash(void){
+	sccbWriteByte(COM7, 0x40);
+	u32 time = 0;
+	send_LED(0x00);
+	time = get_ticks();
+
+	while(get_ticks()<time+30){}
+	
+	{
+	camState = 0;
+	while(camState != 2);
+	FIFO_READY;
+	u8 temp = 0;
+	for(uint16_t j=0;j<240;j++){
+		for(uint16_t i=0;i<320;i++)
+		{
+			if(i<Position.n[0]+20&&i>Position.n[0]-20&&j>Position.n[1]-20&&j<Position.n[1]+20){
+			READ_FIFO_GREYSCALE(temp);
+			rough[j-Position.n[1]+20][i-Position.n[0]+20]=temp;
+			}else{
+				FAKE_READ();
+			}
+		}
+	}
+}
+		
+	
+	send_LED(2);
+	time = get_ticks();
+	while(get_ticks()<time+30){}
+
+	camState = 0;
+	while(camState != 2);
+	FIFO_READY;
+		{
+
+	u8 temp = 0;
+	for(uint16_t j=0;j<240;j++){
+		for(uint16_t i=0;i<320;i++)
+		{
+			if(i<Position.n[0]+20&&i>Position.n[0]-20&&j>Position.n[1]-20&&j<Position.n[1]+20){
+			READ_FIFO_GREYSCALE(temp);
+			if(temp-rough[j-Position.n[1]+20][i-Position.n[0]+20]>140){
+				Position.n[0]=i;
+				Position.n[1]=j;
+				return;
+			}
+			}else{
+				FAKE_READ();
+			}
+		}
+	}
+}
+
+
+
+
+}
+
+
 
 
 void PositionUpdate(void){
@@ -1139,7 +1257,8 @@ void PositionUpdate(void){
 			}
 	}*/
 	
-	flashDetection(1,2,5);
+	//flashDetection(1,2,5);
+	quickflash();
 	ComputeCoordinate(Position.n[0],Position.n[1]);
 	
 	
@@ -1192,6 +1311,9 @@ u8 in_upper(u32 x,u32 y){
 void computeDirty(void){
 {
 	storeImage2();
+	//SD_save(readnum()*512*150);
+	//writenum(readnum()+1);
+	
 	u16 Dirty[20][25];
 	tft_clear();
 	vec3 dis = vec_sub(corner[0],corner[2]);
@@ -1300,7 +1422,44 @@ void computeDirty(void){
 	camState = 0;
 
 }
-
-
-
 }
+
+
+
+void user_point_X_increase(u8 index){
+		user_point[index].n[0]+=6;
+}
+
+void user_point_X_decrease(u8 index){
+		user_point[index].n[0]-=6;
+}
+
+void user_point_Y_increase(u8 index){
+		user_point[index].n[1]+=6;
+}
+
+void user_point_Y_decrease(u8 index){
+		user_point[index].n[1]-=6;
+}
+
+void set_user_flag(void){
+		user_flag = 1;
+}
+
+void reset_user_flag(void){
+		user_flag = 0;
+}
+
+s32 get_user_point_X(u8 index){
+	return user_point[index].n[0];
+}
+
+s32 get_user_point_Y(u8 index){
+	return user_point[index].n[1];
+}
+
+void SetBackToZero(void){
+	Position.n[0]=corner[2].n[0];
+	Position.n[1]=corner[2].n[1];
+}
+

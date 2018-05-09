@@ -40,6 +40,8 @@ void TestFunction(void);
 
 void PositionUpdate(void);
 
+void UserPositionInit(void);
+
 void ComputeCoordinate(u16 x,u16 y);
 
 vec3 WhiteBoardToCamera(vec3 v);
@@ -59,6 +61,24 @@ mat3 getUpper_M(void);
 u8 in_upper(u32 x,u32 y);
 
 void computeDirty(void);
+
+void user_point_X_increase(u8 index);
+
+void user_point_X_decrease(u8 index);
+
+void user_point_Y_increase(u8 index);
+
+void user_point_Y_decrease(u8 index);
+
+s32 get_user_point_X(u8 index);
+
+s32 get_user_point_Y(u8 index);
+
+void set_user_flag(void);
+
+void reset_user_flag(void);
+
+void SetBackToZero(void);
 // -image colour, resolution setting-
 //sccbWriteByte(COM7,);
 

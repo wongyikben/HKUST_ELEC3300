@@ -451,6 +451,7 @@ FlagStatus DMA_GetFlagStatus(uint32_t DMAy_FLAG)
   }
 
   /* Check the status of the specified DMAy flag */
+	// BUG is HERE !!!
   if ((tmpreg & DMAy_FLAG) != (uint32_t)RESET)
   {
     /* DMAy_FLAG is set */

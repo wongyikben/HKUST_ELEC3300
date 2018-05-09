@@ -592,17 +592,22 @@
             <File>
               <FileName>diskio.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\library\diskio.c</FilePath>
+              <FilePath>.\src\library\source\diskio.c</FilePath>
             </File>
             <File>
               <FileName>ff.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\library\ff.c</FilePath>
+              <FilePath>.\src\library\source\ff.c</FilePath>
             </File>
             <File>
-              <FileName>ff_gen_drv.c</FileName>
+              <FileName>ffsystem.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\src\library\ff_gen_drv.c</FilePath>
+              <FilePath>.\src\library\source\ffsystem.c</FilePath>
+            </File>
+            <File>
+              <FileName>ffunicode.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\src\library\source\ffunicode.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -39,6 +39,10 @@
 ".\objects\vec.o"
 ".\objects\flash.o"
 ".\objects\sdcard.o"
+".\objects\diskio.o"
+".\objects\ff.o"
+".\objects\ffsystem.o"
+".\objects\ffunicode.o"
 ".\objects\main.o"
 --strict --scatter ".\Objects\ustrobo17_internal.sct"
 --summary_stderr --info summarysizes --map --xref --callgraph --symbols

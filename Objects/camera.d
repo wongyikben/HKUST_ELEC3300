@@ -24,3 +24,5 @@
 .\objects\camera.o: src\library\uart.h
 .\objects\camera.o: src\library\../../vec.h
 .\objects\camera.o: src\library\flash.h
+.\objects\camera.o: src\library\sdcard.h
+.\objects\camera.o: .\src\stm32f10x_std\inc\stm32f10x_sdio.h

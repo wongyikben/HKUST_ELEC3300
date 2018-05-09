@@ -43,7 +43,7 @@ void uart_init(COM_TypeDef COM, u32 br) {
 	GPIO_InitStructure.GPIO_Pin = com_rx_pin[COM];
 	GPIO_Init(com_rx_port[COM], &GPIO_InitStructure);
 	
-	GPIO_PinRemapConfig(GPIO_PartialRemap_USART3,ENABLE);
+	//GPIO_PinRemapConfig(GPIO_PartialRemap_USART3,ENABLE);
 	
 	USART_InitTypeDef USART_InitStructure;
 	USART_InitStructure.USART_BaudRate = br;

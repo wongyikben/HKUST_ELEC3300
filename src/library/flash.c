@@ -2,6 +2,7 @@
 
 #define startAddress 			0x08009000
 #define startAddress2    	0x0801D000
+#define startAddress3 		0x08031000
 
 void writeRow(u8* array, u16 y){
 	if(y%colSize!=0){return;}
@@ -29,6 +30,14 @@ void writeRow2(u8* array, u16 y){
 	FLASH_Lock();
 }
 
+void writenum(u8 num){
+	FLASH_Unlock();
+	FLASH_ClearFlag(FLASH_FLAG_EOP|FLASH_FLAG_PGERR|FLASH_FLAG_WRPRTERR);
+	FLASH_ErasePage(startAddress3);
+	u16 word = (u16)num;
+	FLASH_ProgramHalfWord((startAddress3),word);
+	FLASH_Lock();
+}
 
 
 
@@ -57,5 +66,9 @@ u8 readImage2(u16 x,u16 y){
 	else{
 	return (uint8_t)((*(uint16_t *)(startAddress2+320*y+offset+x-1)));
 	}
+}
+
+u16 readnum(void){
+	return (*(u16*)startAddress3);
 }
 

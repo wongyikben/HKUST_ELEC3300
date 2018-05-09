@@ -21,6 +21,7 @@
 
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
+#include "tft.h"
 
 
 /*--------------------------------------------------------------------------
@@ -239,7 +240,8 @@
 #endif
 #define GET_FATTIME()	((DWORD)(FF_NORTC_YEAR - 1980) << 25 | (DWORD)FF_NORTC_MON << 21 | (DWORD)FF_NORTC_MDAY << 16)
 #else
-#define GET_FATTIME()	get_fattime()
+#define GET_FATTIME()	((DWORD)(2015 - 1980) << 25)| ((DWORD)1 << 21)|((DWORD)1 << 16) | ((DWORD)0 << 11)| ((DWORD)0 << 5)|((DWORD)0 >> 1)
+
 #endif
 
 
@@ -915,7 +917,6 @@ static void unlock_fs (
 #endif
 
 
-
 #if FF_FS_LOCK != 0
 /*-----------------------------------------------------------------------*/
 /* File lock control functions                                           */
@@ -1063,13 +1064,16 @@ static FRESULT move_window (	/* Returns FR_OK or FR_DISK_ERR */
 #if !FF_FS_READONLY
 		res = sync_window(fs);		/* Write-back changes */
 #endif
+
 		if (res == FR_OK) {			/* Fill sector window with new data */
+
 			if (disk_read(fs->pdrv, fs->win, sector, 1) != RES_OK) {
 				sector = 0xFFFFFFFF;	/* Invalidate window if read data is not valid */
 				res = FR_DISK_ERR;
 			}
 			fs->winsect = sector;
 		}
+		
 	}
 	return res;
 }
@@ -3177,6 +3181,7 @@ static BYTE check_fs (	/* 0:FAT, 1:exFAT, 2:Valid BS but not FAT, 3:Not a BS, 4:
 )
 {
 	fs->wflag = 0; fs->winsect = 0xFFFFFFFF;		/* Invaidate window */
+
 	if (move_window(fs, sect) != FR_OK) return 4;	/* Load boot record */
 
 	if (ld_word(fs->win + BS_55AA) != 0xAA55) return 3;	/* Check boot record signature (always here regardless of the sector size) */
@@ -3253,10 +3258,17 @@ static FRESULT find_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 	if (disk_ioctl(fs->pdrv, GET_SECTOR_SIZE, &SS(fs)) != RES_OK) return FR_DISK_ERR;
 	if (SS(fs) > FF_MAX_SS || SS(fs) < FF_MIN_SS || (SS(fs) & (SS(fs) - 1))) return FR_DISK_ERR;
 #endif
+	
+	// TESTED
 
 	/* Find an FAT partition on the drive. Supports only generic partitioning rules, FDISK and SFD. */
 	bsect = 0;
 	fmt = check_fs(fs, bsect);			/* Load sector 0 and check if it is an FAT-VBR as SFD */
+	
+	//tft_clear();
+	//tft_prints(0,0,"(*_*)");
+	//tft_update();
+	
 	if (fmt == 2 || (fmt < 2 && LD2PT(vol) != 0)) {	/* Not an FAT-VBR or forced partition number */
 		for (i = 0; i < 4; i++) {		/* Get partition offset */
 			pt = fs->win + (MBR_Table + i * SZ_PTE);
@@ -3274,6 +3286,8 @@ static FRESULT find_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 
 	/* An FAT volume is found (bsect). Following code initializes the filesystem object */
 
+	// The Bug is up there 
+	
 #if FF_FS_EXFAT
 	if (fmt == 1) {
 		QWORD maxlba;
@@ -3483,7 +3497,11 @@ FRESULT f_mount (
 	vol = get_ldnumber(&rp);
 	if (vol < 0) return FR_INVALID_DRIVE;
 	cfs = FatFs[vol];					/* Pointer to fs object */
-
+	
+	//tft_clear();
+	//tft_prints(0,0,"First");
+	//tft_update();
+	
 	if (cfs) {
 #if FF_FS_LOCK != 0
 		clear_lock(cfs);
@@ -3494,17 +3512,34 @@ FRESULT f_mount (
 		cfs->fs_type = 0;				/* Clear old fs object */
 	}
 
+	//tft_clear();
+	//tft_prints(0,0,"After cfs");
+	//tft_update();
+	
 	if (fs) {
 		fs->fs_type = 0;				/* Clear new fs object */
 #if FF_FS_REENTRANT						/* Create sync object for the new volume */
 		if (!ff_cre_syncobj((BYTE)vol, &fs->sobj)) return FR_INT_ERR;
 #endif
 	}
+	
+	//tft_clear();
+	//tft_prints(0,0,"After fs");
+	//tft_update();
+	
 	FatFs[vol] = fs;					/* Register new fs object */
 
 	if (opt == 0) return FR_OK;			/* Do not mount now, it will be mounted later */
 
+	//tft_clear();
+	//tft_prints(0,0,"After opt");
+	//tft_update();
+	
 	res = find_volume(&path, &fs, 0);	/* Force mounted the volume */
+	
+	//tft_clear();
+	//tft_prints(0,0,"After find");
+	//tft_update();
 	LEAVE_FF(fs, res);
 }
 
